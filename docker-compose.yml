@@ -1,0 +1,14 @@
+services:
+  schemaforge:
+    build: .
+    environment:
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://host.docker.internal:11434/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-ollama}
+      OPENAI_MODEL: ${OPENAI_MODEL:-qwen2.5:1.5b}
+    volumes:
+      - ./schemas:/app/schemas:ro
+      - ./examples:/app/examples:ro
+      - ./data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+

@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "schemaforge"
+version = "0.1.0"
+description = "Validated structured-data extraction through any OpenAI-compatible LLM API"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Baptiste Guyton" }]
+dependencies = [
+  "httpx>=0.27,<1",
+  "jsonschema>=4.23,<5",
+  "pyarrow>=18,<22",
+  "pydantic>=2.10,<3",
+  "structlog>=24.4,<26",
+  "typer>=0.15,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.14,<2",
+  "pre-commit>=4.0,<5",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6.0,<7",
+  "respx>=0.22,<1",
+  "ruff>=0.9,<1",
+  "types-jsonschema>=4.23,<5",
+]
+
+[project.scripts]
+schemaforge = "schemaforge.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/schemaforge"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --cov=schemaforge --cov-report=term-missing --cov-fail-under=70"
+testpaths = ["tests"]
+markers = ["slow: calls a real external model server"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["work", "outputs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["schemaforge"]
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["if __name__ == .__main__.:", "pragma: no cover"]
+

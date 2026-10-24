@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Contact",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "email": {"type": ["string", "null"], "format": "email"},
+    "phone": {"type": ["string", "null"]},
+    "company": {"type": ["string", "null"]}
+  },
+  "required": ["name", "email", "phone", "company"]
+}
+
