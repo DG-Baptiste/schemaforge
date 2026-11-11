@@ -18,4 +18,5 @@ repos:
           - structlog>=24.4
           - typer>=0.15
           - types-jsonschema>=4.23
+          - types-PyYAML>=6.0
 

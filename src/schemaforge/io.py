@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
@@ -13,14 +12,12 @@ from pydantic import ValidationError
 
 from schemaforge.errors import SchemaForgeError
 from schemaforge.models import InputRecord, OutputRecord
+from schemaforge.schema_loader import load_schema
 
 
 def read_schema(path: Path) -> dict[str, Any]:
     """Read a JSON Schema and require an object at its root."""
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise SchemaForgeError(f"Cannot read schema {path}: {exc}") from exc
+    value = load_schema(path)
     if not isinstance(value, dict):
         raise SchemaForgeError("JSON Schema root must be an object")
     return value

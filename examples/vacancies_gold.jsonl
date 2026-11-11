@@ -1,0 +1,3 @@
+{"id":"job-001","name":"reference","gold":{"title":"Python-разработчик","company":"ООО Альфа","salary_min":180000,"salary_max":240000,"currency":"RUB","employment_type":"full_time","published_at":null,"skills":["Python","FastAPI"]}}
+{"id":"job-002","name":"reference","gold":{"title":"Data analyst","company":"Beta Labs","salary_min":120000,"salary_max":null,"currency":"RUB","employment_type":null,"published_at":"2026-10-20","skills":["SQL","pandas"]}}
+

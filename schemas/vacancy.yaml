@@ -1,0 +1,32 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Vacancy
+type: object
+additionalProperties: false
+properties:
+  title:
+    type: string
+    minLength: 1
+  company:
+    type: string
+    minLength: 1
+  salary_min:
+    type: [number, 'null']
+    minimum: 0
+  salary_max:
+    type: [number, 'null']
+    minimum: 0
+  currency:
+    type: [string, 'null']
+    enum: [RUB, USD, EUR, null]
+  employment_type:
+    type: [string, 'null']
+    enum: [full_time, part_time, contract, internship, null]
+  published_at:
+    type: [string, 'null']
+    format: date
+  skills:
+    type: array
+    items:
+      type: string
+required: [title, company, salary_min, salary_max, currency, employment_type, published_at, skills]
+

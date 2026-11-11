@@ -15,8 +15,9 @@ class Settings(BaseModel):
     base_url: str = Field(default="http://localhost:11434/v1")
     api_key: str = Field(default="ollama", repr=False)
     model: str = Field(default="qwen2.5:1.5b")
+    grammar: str | None = Field(default=None, repr=False)
     timeout_seconds: float = Field(default=60.0, gt=0)
-    max_retries: int = Field(default=2, ge=0, le=10)
+    max_retries: int = Field(default=2, ge=0, le=3)
     log_level: str = Field(default="INFO")
 
     @classmethod
@@ -26,6 +27,7 @@ class Settings(BaseModel):
             base_url=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1").rstrip("/"),
             api_key=os.getenv("OPENAI_API_KEY", "ollama"),
             model=os.getenv("OPENAI_MODEL", "qwen2.5:1.5b"),
+            grammar=os.getenv("LLAMA_CPP_GRAMMAR"),
             timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "60")),
             max_retries=int(os.getenv("LLM_MAX_RETRIES", "2")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),

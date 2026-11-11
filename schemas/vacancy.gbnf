@@ -1,0 +1,7 @@
+root ::= "{" ws "\"title\"" ws ":" ws string "," ws "\"company\"" ws ":" ws string "," ws "\"salary_min\"" ws ":" ws number_or_null "," ws "\"salary_max\"" ws ":" ws number_or_null "," ws "\"currency\"" ws ":" ws string_or_null "," ws "\"employment_type\"" ws ":" ws string_or_null "," ws "\"published_at\"" ws ":" ws string_or_null "," ws "\"skills\"" ws ":" ws array "}"
+array ::= "[]" | "[" ws string ("," ws string)* "]"
+number_or_null ::= number | "null"
+string_or_null ::= string | "null"
+number ::= [0-9]+ ("." [0-9]+)?
+string ::= "\"" ([^"\\] | "\\" .)* "\""
+ws ::= [ \t\n]*

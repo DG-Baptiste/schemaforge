@@ -18,6 +18,7 @@ class StubClient:
         messages: list[dict[str, str]],
         schema: dict[str, Any],
         schema_name: str = "extraction",
+        mode: str = "schema",
     ) -> str:
         self.messages.append(messages.copy())
         reply = next(self.replies)

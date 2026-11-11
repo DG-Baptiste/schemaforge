@@ -36,17 +36,27 @@ class OpenAICompatibleClient:
         messages: list[dict[str, str]],
         schema: dict[str, Any],
         schema_name: str = "extraction",
+        mode: str = "schema",
     ) -> str:
         """Request JSON matching a schema using OpenAI structured-output syntax."""
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.settings.model,
             "messages": messages,
             "temperature": 0,
-            "response_format": {
+        }
+        if mode == "schema":
+            payload["response_format"] = {
                 "type": "json_schema",
                 "json_schema": {"name": schema_name, "strict": True, "schema": schema},
-            },
-        }
+            }
+        elif mode == "json":
+            payload["response_format"] = {"type": "json_object"}
+        elif mode == "grammar":
+            if not self.settings.grammar:
+                raise ModelAPIError("LLAMA_CPP_GRAMMAR is required for grammar mode")
+            payload["grammar"] = self.settings.grammar
+        elif mode != "free":
+            raise ModelAPIError(f"Unsupported extraction mode: {mode}")
         try:
             response = self._client.post("chat/completions", json=payload)
             response.raise_for_status()

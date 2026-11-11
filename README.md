@@ -1,9 +1,11 @@
 # SchemaForge
 
 SchemaForge turns unstructured text into validated structured data through any
-OpenAI-compatible `/v1/chat/completions` API. It combines guided JSON generation,
-JSON Schema validation, deterministic normalization, and an automatic repair loop.
-It supports single texts and fault-tolerant JSONL batches, with JSONL or Parquet output.
+OpenAI-compatible `/v1/chat/completions` API. The selected scenario is vacancy
+extraction. It combines few-shot prompting, guided JSON generation, Pydantic/JSON
+Schema validation, deterministic normalization, and an automatic repair loop.
+It supports single texts, asynchronous JSONL batches, checkpoints, evaluation metrics,
+and JSONL or Parquet output.
 
 No model is trained or bundled. The same application works with Ollama, llama.cpp,
 vLLM, or a cloud provider by changing environment variables only.
@@ -18,16 +20,17 @@ flowchart LR
     HTTP --> Model[Ollama / llama.cpp / vLLM / cloud]
     Extractor --> Normalize[Regex normalization]
     Normalize --> Validate[JSON Schema validation]
-    Validate -->|invalid + feedback| HTTP
+    Validate -->|invalid + feedback, max 3 retries| HTTP
     Validate -->|valid| Writers[JSONL / Parquet writers]
 ```
 
 The package uses ports and adapters: `Extractor` depends on a small protocol rather
 than a provider SDK. This keeps business logic testable and provider-independent.
-Pydantic validates configuration and input/output records; JSON Schema validates the
-dynamic extraction contract supplied by a user. Batch failures are data, so one bad
-record does not terminate a long job. Logs go to stderr as JSON; command results go to
-stdout or output files.
+Pydantic validates configuration, vacancy fields, and input/output records. YAML or
+JSON Schema files compile into dynamic Pydantic models, while JSON Schema is passed to
+the model for guided decoding. Batch work uses `asyncio.Semaphore`, writes a checkpoint
+by record ID, and can resume after a failure. Logs go to stderr as JSON; command results
+go to stdout or output files.
 
 ## Requirements
 
@@ -60,19 +63,55 @@ export OPENAI_MODEL=Qwen/Qwen2.5-3B-Instruct
 
 ## CLI usage
 
-Extract one record:
+Extract one vacancy:
 
 ```bash
 uv run schemaforge extract \
-  "Ada Lovelace works at Analytical Engines Ltd. Email ADA@EXAMPLE.ORG." \
-  --schema schemas/contact.json
+  "Ищем Python-разработчика в ООО Альфа. Зарплата 180000–240000 RUB." \
+  --schema schemas/vacancy.yaml
 ```
 
-Process JSONL into Parquet:
+Run an asynchronous batch with a checkpoint:
 
 ```bash
-uv run schemaforge batch examples/contacts.jsonl data/contacts.parquet \
-  --schema schemas/contact.json --format parquet
+uv run schemaforge extract run \
+  --schema vacancy \
+  --in examples/vacancies.jsonl \
+  --out data/vacancies.parquet \
+  --format parquet \
+  --concurrency 4 \
+  --checkpoint data/vacancies.checkpoint.jsonl
+```
+
+Evaluate predictions against the checked-in gold sample:
+
+```bash
+uv run schemaforge extract eval \
+  --schema vacancy \
+  --in examples/vacancies.jsonl \
+  --gold examples/vacancies_gold.jsonl
+```
+
+Generate a deterministic 500-record benchmark for the asynchronous pipeline:
+
+```bash
+uv run python scripts/generate_benchmark.py --count 500
+uv run schemaforge extract run --schema vacancy \
+  --in data/vacancies_500.jsonl --out data/vacancies_500.parquet \
+  --format parquet --concurrency 4 --checkpoint data/vacancies_500.checkpoint.jsonl
+```
+
+The CLI supports three model-output modes:
+
+1. `--mode free` asks for JSON in the prompt without a response-format constraint.
+2. `--mode json` uses OpenAI-compatible JSON mode.
+3. `--mode schema` uses guided JSON Schema decoding and is the default.
+4. `--mode grammar` sends `LLAMA_CPP_GRAMMAR` to a llama.cpp-compatible server.
+
+Print a generated Pydantic JSON Schema:
+
+```bash
+uv run schemaforge schema vacancy
 ```
 
 Input lines require a non-empty `text` field and may contain an `id`. Failed records
@@ -108,8 +147,8 @@ For mounted batch files, use Compose:
 
 ```bash
 mkdir -p data
-docker compose run --rm schemaforge batch /app/examples/contacts.jsonl \
-  /app/data/contacts.parquet --schema /app/schemas/contact.json --format parquet
+docker compose run --rm schemaforge batch /app/examples/vacancies.jsonl \
+  /app/data/vacancies.parquet --schema /app/schemas/vacancy.yaml --format parquet
 ```
 
 ## Configuration
@@ -119,8 +158,9 @@ docker compose run --rm schemaforge batch /app/examples/contacts.jsonl \
 | `OPENAI_BASE_URL` | `http://localhost:11434/v1` | Compatible API root |
 | `OPENAI_API_KEY` | `ollama` | Bearer token |
 | `OPENAI_MODEL` | `qwen2.5:1.5b` | Provider model identifier |
+| `LLAMA_CPP_GRAMMAR` | unset | Optional GBNF grammar for `--mode grammar` |
 | `LLM_TIMEOUT_SECONDS` | `60` | HTTP timeout |
-| `LLM_MAX_RETRIES` | `2` | Repair attempts after the first call |
+| `LLM_MAX_RETRIES` | `2` | Repair attempts after the first call, maximum `3` |
 | `LOG_LEVEL` | `INFO` | Structured log level |
 
 ## Known limitations
@@ -132,7 +172,10 @@ docker compose run --rm schemaforge batch /app/examples/contacts.jsonl \
   schemas should use JSONL output.
 - Extraction quality depends on the selected model. Qwen2.5-1.5B is fast for demos;
   Qwen2.5-3B is generally more accurate while remaining CPU-friendly in 4-bit form.
-- The CLI runs batch requests sequentially to avoid overwhelming local CPU servers.
+- Batch requests are bounded by `--concurrency`; a local CPU server should usually use
+  a small value such as 2–4.
+- Precision and recall are field-level metrics over the supplied gold JSONL file, not
+  a replacement for a larger manually reviewed evaluation set.
 
 ## Release checklist
 

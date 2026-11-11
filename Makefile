@@ -13,7 +13,7 @@ test:
 	uv run pytest -m "not slow"
 
 demo:
-	uv run schemaforge extract "Ada Lovelace works at Analytical Engines Ltd. Email ADA@EXAMPLE.ORG." --schema schemas/contact.json
+	uv run schemaforge extract "Ищем Python-разработчика в ООО Альфа. Зарплата 180000–240000 RUB." --schema schemas/vacancy.yaml
 
 docker-build:
 	docker build -t schemaforge:local .

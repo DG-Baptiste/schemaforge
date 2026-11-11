@@ -7,10 +7,13 @@ from typing import Any, Protocol
 
 import structlog
 from jsonschema import Draft202012Validator, SchemaError, ValidationError
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 from schemaforge.errors import ExtractionError, ModelAPIError
 from schemaforge.models import ExtractionResult
 from schemaforge.normalization import normalize_data
+from schemaforge.prompts import build_messages
 
 logger = structlog.get_logger(__name__)
 
@@ -23,15 +26,28 @@ class CompletionClient(Protocol):
         messages: list[dict[str, str]],
         schema: dict[str, Any],
         schema_name: str = "extraction",
+        mode: str = "schema",
     ) -> str: ...
 
 
 class Extractor:
     """Extract, normalize, validate, and ask the model to repair failures."""
 
-    def __init__(self, client: CompletionClient, max_retries: int = 2) -> None:
+    def __init__(
+        self,
+        client: CompletionClient,
+        max_retries: int = 2,
+        mode: str = "schema",
+        validator_model: type[BaseModel] | None = None,
+    ) -> None:
+        if not 0 <= max_retries <= 3:
+            raise ValueError("max_retries must be between 0 and 3")
+        if mode not in {"schema", "json", "free", "grammar"}:
+            raise ValueError("mode must be schema, json, free, or grammar")
         self.client = client
         self.max_retries = max_retries
+        self.mode = mode
+        self.validator_model = validator_model
 
     def extract(self, text: str, schema: dict[str, Any]) -> ExtractionResult:
         if not text.strip():
@@ -41,16 +57,23 @@ class Extractor:
         except SchemaError as exc:
             raise ExtractionError(f"Invalid JSON Schema: {exc.message}") from exc
 
-        messages = self._initial_messages(text)
+        messages = build_messages(text, schema, mode=self.mode)
         last_error = "unknown validation error"
         for attempt in range(1, self.max_retries + 2):
             try:
-                raw = self.client.complete_json(messages, schema)
+                raw = self.client.complete_json(messages, schema, mode=self.mode)
                 data = normalize_data(self._parse_json(raw))
                 Draft202012Validator(schema).validate(data)
+                if self.validator_model is not None:
+                    data = self.validator_model.model_validate(data).model_dump(mode="json")
                 logger.info("extraction_succeeded", attempt=attempt)
                 return ExtractionResult(data=data, attempts=attempt)
-            except (json.JSONDecodeError, ValidationError, ModelAPIError) as exc:
+            except (
+                json.JSONDecodeError,
+                ValidationError,
+                PydanticValidationError,
+                ModelAPIError,
+            ) as exc:
                 last_error = self._describe_error(exc)
                 logger.warning("extraction_attempt_failed", attempt=attempt, error=last_error)
                 if attempt <= self.max_retries:
@@ -62,19 +85,6 @@ class Extractor:
             f"Could not produce schema-valid JSON after {self.max_retries + 1} attempts: "
             f"{last_error}"
         )
-
-    @staticmethod
-    def _initial_messages(text: str) -> list[dict[str, str]]:
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "Extract factual data from the user text. Return only one JSON object. "
-                    "Do not invent values; use null only when the schema permits it."
-                ),
-            },
-            {"role": "user", "content": text},
-        ]
 
     @staticmethod
     def _repair_messages(raw: str, error: str) -> list[dict[str, str]]:

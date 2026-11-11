@@ -12,7 +12,8 @@ build/
 .env
 work/
 outputs/
-data/
-data/output/
+\.codex-build/
+data/*
+!data/README.md
 *.parquet
 
