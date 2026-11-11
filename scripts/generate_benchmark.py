@@ -12,8 +12,8 @@ def main() -> None:
     parser.add_argument("--count", type=int, default=500)
     parser.add_argument("--out", type=Path, default=Path("data/vacancies_500.jsonl"))
     args = parser.parse_args()
-    if not 500 <= args.count <= 2000:
-        parser.error("--count must be between 500 and 2000")
+    if not 20 <= args.count <= 2000:
+        parser.error("--count must be between 20 and 2000")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as stream:
         for index in range(1, args.count + 1):

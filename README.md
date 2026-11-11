@@ -101,6 +101,12 @@ uv run schemaforge extract run --schema vacancy \
   --format parquet --concurrency 4 --checkpoint data/vacancies_500.checkpoint.jsonl
 ```
 
+For the first project stage, generate 20 records for a manual review:
+
+```bash
+uv run python scripts/generate_benchmark.py --count 20 --out data/vacancies_20.jsonl
+```
+
 The CLI supports four model-output modes:
 
 1. `--mode free` asks for JSON in the prompt without a response-format constraint.
