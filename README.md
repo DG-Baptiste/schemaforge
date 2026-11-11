@@ -101,7 +101,7 @@ uv run schemaforge extract run --schema vacancy \
   --format parquet --concurrency 4 --checkpoint data/vacancies_500.checkpoint.jsonl
 ```
 
-The CLI supports three model-output modes:
+The CLI supports four model-output modes:
 
 1. `--mode free` asks for JSON in the prompt without a response-format constraint.
 2. `--mode json` uses OpenAI-compatible JSON mode.
