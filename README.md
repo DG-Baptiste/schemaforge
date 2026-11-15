@@ -183,10 +183,4 @@ docker compose run --rm schemaforge batch /app/examples/vacancies.jsonl \
 - Precision and recall are field-level metrics over the supplied gold JSONL file, not
   a replacement for a larger manually reviewed evaluation set.
 
-## Release checklist
-
-Before the deadline, merge to `main`, confirm CI is green, tag a release, and publish
-the image (for example `docker buildx build --platform linux/amd64,linux/arm64 --push
--t DOCKERHUB_USER/schemaforge:1.0.0 .`). Verify the public repository and image from a
-clean machine before the 10-minute live demonstration.
 
